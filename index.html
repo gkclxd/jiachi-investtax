@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="企業投資架構與營所稅風險決策地圖：個人名義 vs 公司名義投資之法規節點與風險燈號對照工具。" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%2310B981%22/%3E%3Cpath d=%22M16 44l10-12 8 7 14-17%22 stroke=%22%23050B18%22 stroke-width=%226%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E" />
+<title>企業投資架構與營所稅風險決策地圖</title>
+
+<!-- 字體 -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+<!-- Tailwind CSS（已預先編譯） -->
+<link rel="stylesheet" href="assets/tailwind.css" />
+
+<!-- Alpine.js -->
+<script defer src="assets/alpine.min.js"></script>
+
+<style>
+  [x-cloak] { display: none !important; }
+  body { background: #050B18; }
+  .glass { background: linear-gradient(145deg, rgba(22,41,74,.72), rgba(10,22,40,.82)); border: 1px solid rgba(148,163,184,.12); backdrop-filter: blur(10px); }
+  .grid-bg { background-image: linear-gradient(rgba(148,163,184,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.05) 1px, transparent 1px); background-size: 36px 36px; }
+
+  /* 燈號 */
+  .light { width: .7rem; height: .7rem; border-radius: 9999px; flex-shrink: 0; }
+  .light-green  { background:#10B981; box-shadow: 0 0 10px 2px rgba(16,185,129,.65); }
+  .light-yellow { background:#FBBF24; box-shadow: 0 0 10px 2px rgba(251,191,36,.65); }
+  .light-red    { background:#F43F5E; box-shadow: 0 0 10px 2px rgba(244,63,94,.7); }
+  .light-off    { background:#334155; }
+
+  .tag-green  { background: rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.4); color:#6EE7B7; }
+  .tag-yellow { background: rgba(251,191,36,.10); border:1px solid rgba(251,191,36,.4); color:#FCD34D; }
+  .tag-red    { background: rgba(244,63,94,.10); border:1px solid rgba(244,63,94,.45); color:#FDA4AF; }
+  .tag-slate  { background: rgba(148,163,184,.08); border:1px solid rgba(148,163,184,.25); color:#CBD5E1; }
+
+  /* 閃爍警示 */
+  @keyframes pulseRed { 0%,100% { box-shadow: 0 0 0 0 rgba(244,63,94,.55); border-color: rgba(244,63,94,.9);} 50% { box-shadow: 0 0 0 10px rgba(244,63,94,0); border-color: rgba(244,63,94,.35);} }
+  .alert-red { animation: pulseRed 1.6s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .blink { animation: blink 1.1s steps(2,start) infinite; }
+
+  /* 流向線 */
+  @keyframes dash { to { stroke-dashoffset: -24; } }
+  .flow-line { stroke-dasharray: 6 6; animation: dash 1.2s linear infinite; }
+
+  /* 滑桿 */
+  input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:9999px; background: linear-gradient(90deg,#10B981 var(--p,50%), #1E355E var(--p,50%)); outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:9999px; background:#fff; border:4px solid #10B981; cursor:grab; box-shadow:0 0 0 6px rgba(16,185,129,.18); }
+  input[type=range]::-moz-range-thumb { width:16px; height:16px; border-radius:9999px; background:#fff; border:4px solid #10B981; cursor:grab; }
+
+  .side-scroll { scrollbar-width: thin; scrollbar-color: #1E355E transparent; }
+  .side-scroll::-webkit-scrollbar { width: 6px; }
+  .side-scroll::-webkit-scrollbar-thumb { background: #1E355E; border-radius: 9999px; }
+  .node { transition: all .35s ease; }
+  .fade-enter { animation: fadeIn .35s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px);} to {opacity:1; transform:none;} }
+
+  @media print {
+    body { background:#fff !important; }
+    .no-print { display:none !important; }
+    #report-modal { position: static !important; background:#fff !important; }
+    #report-card { box-shadow:none !important; color:#0f172a !important; background:#fff !important; max-height:none !important; overflow:visible !important; }
+  }
+</style>
+</head>
+
+<body class="font-sans text-slate-200 antialiased" x-data="warRoom()" x-init="init()">
+
+<!-- ============================================================
+     1. HERO：品牌門面與免責聲明
+     ============================================================ -->
+<header class="relative overflow-hidden grid-bg border-b border-slate-800/80">
+  <div class="absolute -top-40 -right-40 w-[520px] h-[520px] rounded-full bg-emerald-500/10 blur-3xl"></div>
+  <div class="absolute -bottom-40 -left-40 w-[420px] h-[420px] rounded-full bg-blue-600/10 blur-3xl"></div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pb-14">
+    <!-- 品牌列（LOGO 與事務所名稱於 CONFIG 修改） -->
+    <nav class="flex items-center justify-between mb-10">
+      <div class="flex items-center gap-3">
+        <template x-if="cfg.logoUrl"><img :src="cfg.logoUrl" alt="LOGO" class="h-9 w-auto rounded" /></template>
+        <template x-if="!cfg.logoUrl">
+          <div class="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 grid place-items-center font-black text-navy-950" x-text="cfg.logoText"></div>
+        </template>
+        <div class="leading-tight">
+          <div class="font-bold text-white text-sm sm:text-base" x-text="cfg.firmName"></div>
+          <div class="text-[11px] text-slate-400 tracking-widest" x-text="cfg.firmNameEn"></div>
+        </div>
+      </div>
+      <a href="#cta" class="no-print text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-full border border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10 transition">諮詢會計師</a>
+    </nav>
+
+    <div class="max-w-4xl">
+      <div class="inline-flex items-center gap-2 text-[11px] sm:text-xs px-3 py-1 rounded-full tag-slate mb-5">
+        <span class="light light-green"></span> STRUCTURE &amp; TAX RISK WAR ROOM
+      </div>
+      <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight">
+        <span class="text-emerald-400">【企業主與高資產族群】</span><br class="hidden sm:block" />
+        投資架構與營所稅衝擊<span class="text-slate-500">–</span>風險決策地圖
+      </h1>
+      <p class="mt-4 text-sm sm:text-base text-slate-400">
+        <span class="text-slate-200 font-medium" x-text="cfg.firmName"></span> 監製 ｜ 企業投資架構觀念對照與風險掃描工具
+      </p>
+    </div>
+
+    <!-- 專業定位聲明 -->
+    <div class="mt-8 glass rounded-2xl p-5 sm:p-6 border-l-4 !border-l-emerald-500 max-w-4xl">
+      <div class="flex items-start gap-3">
+        <div class="text-2xl leading-none">🛡️</div>
+        <div>
+          <h2 class="font-bold text-white mb-2">【專業定位聲明】</h2>
+          <p class="text-sm leading-relaxed text-slate-300">
+            本網頁<strong class="text-white">非自動化申報工具</strong>，亦<strong class="text-white">不提供特定個案之最終稅額計算</strong>。鑑於台灣稅法（含所得稅法、營業稅法、CFC 制度及實質課稅原則）極具個案差異性，本模型僅作為「架構性觀念對照與風險掃描」之用。具體公司設立、增資變更與財稅簽證，請洽執業會計師進行專案覆核。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 lg:space-y-0 lg:grid lg:grid-cols-[380px_minmax(0,1fr)] xl:grid-cols-[430px_minmax(0,1fr)] lg:gap-8 lg:items-start">
+
+<!-- ========== 左欄：控制台（桌面版固定於左側） ========== -->
+<aside class="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto side-scroll">
+
+<!-- ============================================================
+     2. 中央互動控制台
+     ============================================================ -->
+<section id="panel" class="glass rounded-3xl p-5 sm:p-8 lg:p-5 xl:p-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-start gap-4 mb-6">
+    <div>
+      <p class="text-xs tracking-[.2em] text-emerald-400 font-semibold">STEP 01 · INPUT PANEL</p>
+      <h2 class="text-xl sm:text-2xl font-bold text-white mt-1">情境控制台</h2>
+    </div>
+    <div class="flex flex-wrap gap-2 no-print">
+      <button @click="loadExample()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-navy-950 font-bold text-sm transition shadow-lg shadow-emerald-500/20">
+        ⚡ 載入經典範例：年營收 3000 萬貿易公司兼營股票
+      </button>
+      <button @click="reset()" class="px-4 py-2.5 rounded-xl tag-slate text-sm hover:bg-slate-700/40 transition">重設</button>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 lg:grid-cols-1 gap-6">
+    <!-- 左：滑桿 -->
+    <div class="space-y-6">
+      <!-- 投資金額 -->
+      <div class="rounded-2xl bg-navy-900/60 border border-slate-700/40 p-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <label for="amount" class="text-sm text-slate-300">投資金額規模</label>
+          <div class="font-mono text-2xl font-bold text-white"><span x-text="fmt(s.amount)"></span><span class="text-sm text-slate-400 ml-1">萬</span></div>
+        </div>
+        <input id="amount" type="range" min="100" max="5000" step="50" x-model.number="s.amount" :style="`--p:${pct(s.amount,100,5000)}%`" />
+        <div class="flex justify-between text-[11px] text-slate-500 mt-2 font-mono"><span>100 萬</span><span>5,000 萬</span></div>
+      </div>
+
+      <!-- 獲利規模（年化收益假設） -->
+      <div class="rounded-2xl bg-navy-900/60 border border-slate-700/40 p-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <label for="yield" class="text-sm text-slate-300">假設年化獲利率（股利＋價差）</label>
+          <div class="font-mono text-2xl font-bold text-white"><span x-text="s.yield"></span><span class="text-sm text-slate-400 ml-1">%</span></div>
+        </div>
+        <input id="yield" type="range" min="1" max="15" step="0.5" x-model.number="s.yield" :style="`--p:${pct(s.yield,1,15)}%`" />
+        <p class="text-[12px] text-slate-400 mt-3">推估年度投資收益規模 ≈ <span class="font-mono text-emerald-300" x-text="fmt(income)"></span> 萬（僅作量級判斷，非稅額）</p>
+      </div>
+
+      <!-- 股利占比（僅國內標的） -->
+      <div x-show="s.asset==='domestic'" x-transition class="rounded-2xl bg-navy-900/60 border border-slate-700/40 p-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <label for="divRatio" class="text-sm text-slate-300">收益組成：股利占比</label>
+          <div class="font-mono text-2xl font-bold text-white"><span x-text="s.divRatio"></span><span class="text-sm text-slate-400 ml-1">%</span></div>
+        </div>
+        <input id="divRatio" type="range" min="0" max="100" step="10" x-model.number="s.divRatio" :style="`--p:${s.divRatio}%`" />
+        <div class="flex justify-between text-[11px] text-slate-500 mt-2"><span>全為價差</span><span>全為股利</span></div>
+      </div>
+
+      <!-- 公司營收 -->
+      <div class="rounded-2xl bg-navy-900/60 border border-slate-700/40 p-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <label for="revenue" class="text-sm text-slate-300">現有公司年營業收入</label>
+          <div class="font-mono text-2xl font-bold text-white"><span x-text="fmt(s.revenue)"></span><span class="text-sm text-slate-400 ml-1">萬</span></div>
+        </div>
+        <input id="revenue" type="range" min="300" max="20000" step="100" x-model.number="s.revenue" :style="`--p:${pct(s.revenue,300,20000)}%`" />
+        <div class="flex justify-between text-[11px] text-slate-500 mt-2 font-mono"><span>300 萬</span><span>2 億</span></div>
+      </div>
+    </div>
+
+    <!-- 右：切換開關 -->
+    <div class="space-y-6">
+      <div class="rounded-2xl bg-navy-900/60 border border-slate-700/40 p-5">
+        <p class="text-sm text-slate-300 mb-3">投資標的類型</p>
+        <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-navy-950/70">
+          <button @click="s.asset='domestic'" :class="s.asset==='domestic' ? 'bg-emerald-500 text-navy-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="py-3 rounded-lg text-sm transition">🇹🇼 國內上市櫃股票</button>
+          <button @click="s.asset='foreign'" :class="s.asset==='foreign' ? 'bg-emerald-500 text-navy-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="py-3 rounded-lg text-sm transition">🌐 境外股票/基金/債券</button>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-navy-900/60 border border-slate-700/40 p-5">
+        <p class="text-sm text-slate-300 mb-3">現有公司營所稅申報型態</p>
+        <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-navy-950/70">
+          <button @click="s.filing='expanded'" :class="s.filing==='expanded' ? 'bg-emerald-500 text-navy-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="py-3 rounded-lg text-sm transition">擴大書審<span class="block text-[11px] opacity-80">淨利預設 6%</span></button>
+          <button @click="s.filing='audit'" :class="s.filing==='audit' ? 'bg-emerald-500 text-navy-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="py-3 rounded-lg text-sm transition">同業利潤率 / 查帳<span class="block text-[11px] opacity-80">依帳載核實</span></button>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-navy-900/60 border border-slate-700/40 p-5">
+        <p class="text-sm text-slate-300 mb-3">企業主個人綜所稅適用級距 <span class="text-slate-500">（用於個人股利計稅方式提示）</span></p>
+        <div class="grid grid-cols-5 gap-2">
+          <template x-for="b in [5,12,20,30,40]" :key="b">
+            <button @click="s.bracket=b" :class="s.bracket===b ? 'bg-emerald-500 text-navy-950 font-bold' : 'bg-navy-950/70 text-slate-400 hover:text-white'" class="py-2.5 rounded-lg text-sm font-mono transition" x-text="b+'%'"></button>
+          </template>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-navy-900/60 border border-slate-700/40 p-5 flex items-center justify-between gap-4">
+        <div>
+          <p class="text-sm text-slate-300">公司盈餘處置傾向</p>
+          <p class="text-[12px] text-slate-500 mt-1" x-text="s.retain ? '傾向保留於公司（再投資）' : '傾向分配予股東'"></p>
+        </div>
+        <button @click="s.retain=!s.retain" :class="s.retain ? 'bg-emerald-500' : 'bg-slate-600'" class="relative w-14 h-8 rounded-full transition shrink-0" role="switch" :aria-checked="s.retain">
+          <span :class="s.retain ? 'translate-x-6' : 'translate-x-0'" class="absolute top-1 left-1 w-6 h-6 rounded-full bg-white transition"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 即時指標列（比例，非稅額） -->
+  <div class="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-3">
+    <div class="rounded-xl bg-navy-950/60 border border-slate-700/40 p-4">
+      <p class="text-[11px] text-slate-400">營收＋非營業收入 量級</p>
+      <p class="font-mono text-lg font-bold mt-1" :class="grossTotal > 3000 ? 'text-rose-300' : 'text-white'"><span x-text="fmt(grossTotal)"></span> 萬</p>
+    </div>
+    <div class="rounded-xl bg-navy-950/60 border border-slate-700/40 p-4">
+      <p class="text-[11px] text-slate-400">投資收益 / 本業推估淨利</p>
+      <p class="font-mono text-lg font-bold mt-1" :class="incomeVsProfit >= 100 ? 'text-rose-300' : incomeVsProfit >= 40 ? 'text-amber-300' : 'text-white'"><span x-text="incomeVsProfit.toFixed(0)"></span>%</p>
+    </div>
+    <div class="rounded-xl bg-navy-950/60 border border-slate-700/40 p-4">
+      <p class="text-[11px] text-slate-400">帳面淨利率偏離（相對 6%）</p>
+      <p class="font-mono text-lg font-bold mt-1" :class="marginLift >= 2 ? 'text-rose-300' : marginLift >= 0.8 ? 'text-amber-300' : 'text-white'">+<span x-text="marginLift.toFixed(1)"></span> pt</p>
+    </div>
+    <div class="rounded-xl bg-navy-950/60 border border-slate-700/40 p-4">
+      <p class="text-[11px] text-slate-400">綜合風險等級</p>
+      <p class="text-lg font-bold mt-1 flex items-center gap-2">
+        <span class="light" :class="lightCls(riskLevel.color)"></span><span x-text="riskLevel.label"></span>
+      </p>
+    </div>
+  </div>
+</section>
+</aside>
+
+<!-- ========== 右欄：決策地圖、檢核清單、對接 ========== -->
+<div class="space-y-10 min-w-0">
+
+<!-- ============================================================
+     3. 核心動態決策地圖
+     ============================================================ -->
+<section id="map">
+  <div class="mb-6">
+    <p class="text-xs tracking-[.2em] text-emerald-400 font-semibold">STEP 02 · DECISION FLOW MAP</p>
+    <h2 class="text-xl sm:text-2xl font-bold text-white mt-1">架構分流：個人名義 vs 公司名義</h2>
+    <p class="text-sm text-slate-400 mt-1">依目前設定即時點亮適用法規節點與風險燈號</p>
+  </div>
+
+  <!-- 資金源頭節點 + 分流 SVG -->
+  <div class="glass rounded-3xl p-3 sm:p-8">
+    <div class="flex justify-center">
+      <div class="node rounded-2xl px-5 py-4 bg-navy-900 border border-emerald-500/40 text-center shadow-lg shadow-emerald-500/10">
+        <p class="text-[11px] text-slate-400 tracking-widest">CAPITAL SOURCE</p>
+        <p class="font-bold text-white mt-1">可投資資金 <span class="font-mono text-emerald-300" x-text="fmt(s.amount)"></span> 萬</p>
+        <p class="text-[12px] text-slate-400 mt-1" x-text="s.asset==='domestic' ? '標的：國內上市櫃股票' : '標的：境外股票／基金／債券'"></p>
+      </div>
+    </div>
+
+    <svg class="block lg:hidden xl:block w-full h-10 md:h-16" viewBox="0 0 1000 64" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M500 0 C500 40, 250 20, 250 64" fill="none" stroke="#38BDF8" stroke-width="2" class="flow-line" />
+      <path d="M500 0 C500 40, 750 20, 750 64" fill="none" :stroke="corpColor" stroke-width="2" class="flow-line" />
+    </svg>
+    <div class="h-6 hidden lg:block xl:hidden"></div>
+
+    <div class="flex items-center justify-center gap-3 mb-3 no-print">
+      <span class="text-[11px] text-slate-500">點選節點可展開法規說明</span>
+      <button @click="descAll=!descAll" class="text-[11px] px-2.5 py-1 rounded-full tag-slate hover:bg-slate-700/40" x-text="descAll ? '▲ 收合全部說明' : '▼ 展開全部說明'"></button>
+    </div>
+    <div id="branches" class="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2 sm:gap-5 scroll-mt-4">
+      <!-- ================= 分支 A：個人名義 ================= -->
+      <article class="rounded-2xl bg-navy-900/70 border border-sky-500/30 p-2.5 sm:p-5 fade-enter min-w-0">
+        <header class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-sky-500/15 border border-sky-500/40 grid place-items-center font-black text-sky-300">A</div>
+            <div>
+              <h3 class="font-bold text-white text-sm sm:text-base">個人名義投資</h3>
+              <p class="hidden sm:block text-[11px] text-slate-400">Personal Name · 燈號基準：與公司名義比較總稅負</p>
+            </div>
+          </div>
+          <span class="self-start text-[11px] sm:text-xs px-2 sm:px-3 py-1 rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap" :class="tagCls(personal.overall)">
+            <span class="light" :class="lightCls(personal.overall)"></span><span x-text="personal.overallText"></span>
+          </span>
+        </header>
+
+        <ol class="space-y-2">
+          <template x-for="(n,i) in personal.nodes" :key="n.title">
+            <li class="relative pl-4 sm:pl-6 fade-enter" x-data="{open:false}">
+              <span class="absolute left-[5px] top-6 bottom-[-10px] sm:bottom-[-14px] w-px bg-slate-700" x-show="i < personal.nodes.length-1"></span>
+              <span class="absolute left-0 top-2 light" :class="lightCls(n.color)"></span>
+              <div class="rounded-xl p-2 sm:p-3 cursor-pointer hover:brightness-125 transition" :class="tagCls(n.color)" @click="open=!open">
+                <p class="text-[10px] sm:text-[11px] opacity-80" :class="(open || descAll) ? '' : 'hidden md:block'" x-text="n.law"></p>
+                <p class="font-bold text-[12px] leading-snug sm:text-sm mt-0.5 text-white flex items-start justify-between gap-1">
+                  <span x-text="n.title"></span>
+                  <span class="text-slate-400 text-[10px] mt-0.5 shrink-0" x-text="(open || descAll) ? '▲' : '▼'"></span>
+                </p>
+                <p class="text-[11.5px] sm:text-[12.5px] mt-1 text-slate-300 leading-relaxed" :class="(open || descAll) ? '' : 'hidden'" x-html="n.desc"></p>
+              </div>
+            </li>
+          </template>
+        </ol>
+      </article>
+
+      <!-- ================= 分支 B：公司名義 ================= -->
+      <article class="rounded-2xl bg-navy-900/70 border p-2.5 sm:p-5 fade-enter min-w-0" :class="riskLevel.color==='red' ? 'border-rose-500/40' : 'border-emerald-500/30'">
+        <header class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-emerald-500/15 border border-emerald-500/40 grid place-items-center font-black text-emerald-300">B</div>
+            <div>
+              <h3 class="font-bold text-white text-sm sm:text-base">公司名義投資</h3>
+              <p class="hidden sm:block text-[11px] text-slate-400">Corporate Name · 燈號基準：相較不投資是否多繳</p>
+            </div>
+          </div>
+          <span class="self-start text-[11px] sm:text-xs px-2 sm:px-3 py-1 rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap" :class="tagCls(corporate.overall)">
+            <span class="light" :class="lightCls(corporate.overall)"></span><span x-text="corporate.overallText"></span>
+          </span>
+        </header>
+
+        <ol class="space-y-2">
+          <template x-for="(n,i) in corporate.nodes" :key="n.title">
+            <li class="relative pl-4 sm:pl-6 fade-enter" x-data="{open:false}">
+              <span class="absolute left-[5px] top-6 bottom-[-10px] sm:bottom-[-14px] w-px bg-slate-700" x-show="i < corporate.nodes.length-1"></span>
+              <span class="absolute left-0 top-2 light" :class="lightCls(n.color)"></span>
+              <div class="rounded-xl p-2 sm:p-3 cursor-pointer hover:brightness-125 transition" :class="tagCls(n.color)" @click="open=!open">
+                <p class="text-[10px] sm:text-[11px] opacity-80" :class="(open || descAll) ? '' : 'hidden md:block'" x-text="n.law"></p>
+                <p class="font-bold text-[12px] leading-snug sm:text-sm mt-0.5 text-white flex items-start justify-between gap-1">
+                  <span x-text="n.title"></span>
+                  <span class="text-slate-400 text-[10px] mt-0.5 shrink-0" x-text="(open || descAll) ? '▲' : '▼'"></span>
+                </p>
+                <p class="text-[11.5px] sm:text-[12.5px] mt-1 text-slate-300 leading-relaxed" :class="(open || descAll) ? '' : 'hidden'" x-html="n.desc"></p>
+              </div>
+            </li>
+          </template>
+        </ol>
+
+        <!-- 動態風險警示標籤 -->
+        <div class="mt-3 sm:mt-5 space-y-2 sm:space-y-3">
+          <div x-show="alertExpanded" x-transition x-data="{open:false}" @click="open=!open" class="alert-red rounded-xl border-2 bg-rose-500/10 p-2 sm:p-3 cursor-pointer">
+            <p class="font-bold text-rose-300 text-[12px] sm:text-sm flex items-center gap-1 sm:gap-2"><span class="blink">⚠️</span> 擴大書審偏離警示<span class="ml-auto text-[10px] text-slate-400" x-text="(open || descAll) ? '▲' : '▼'"></span></p>
+            <div :class="(open || descAll) ? '' : 'hidden'"><p class="text-[12px] sm:text-[13px] text-rose-100 mt-1.5 leading-relaxed">警示：大筆非營業收益將大幅拉高公司整體淨利率，使公司無法適用擴大書審，面臨國稅局調帳與補稅風險！</p>
+            <ul class="mt-2 text-[12px] text-rose-200/80 list-disc pl-5 space-y-0.5">
+              <template x-for="r in expandedReasons" :key="r"><li x-text="r"></li></template>
+            </ul></div>
+          </div>
+          <div x-show="alertAudit" x-transition x-data="{open:false}" @click="open=!open" class="rounded-xl border border-amber-400/50 bg-amber-400/10 p-2 sm:p-3 cursor-pointer">
+            <p class="font-bold text-amber-300 text-[12px] sm:text-sm flex items-center gap-1">⚠️ 法定簽證門檻預警<span class="ml-auto text-[10px] text-slate-400" x-text="(open || descAll) ? '▲' : '▼'"></span></p>
+            <div :class="(open || descAll) ? '' : 'hidden'"><p class="text-[12px] sm:text-[13px] text-amber-100 mt-1.5 leading-relaxed">預警：已達到法定財稅簽證/資本簽證評估門檻，建議委任會計師提供保護力。</p>
+            <ul class="mt-2 text-[12px] text-amber-200/80 list-disc pl-5 space-y-0.5">
+              <template x-for="r in auditReasons" :key="r"><li x-text="r"></li></template>
+            </ul></div>
+          </div>
+          <div x-show="!alertExpanded && !alertAudit" class="rounded-xl tag-green p-2 sm:p-3 text-[12px] sm:text-[13px]">
+            ✅ 未觸發擴大書審或簽證門檻警示
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- 圖例 -->
+    <div class="mt-6 flex flex-wrap gap-4 text-[12px] text-slate-400">
+      <span class="flex items-center gap-2"><span class="light light-green"></span>影響不大：對最終稅負影響有限</span>
+      <span class="flex items-center gap-2"><span class="light light-yellow"></span>因投資多繳：此架構產生額外稅負，不投資則不會發生</span>
+      <span class="flex items-center gap-2"><span class="light light-red"></span>多繳且衝擊大：額外稅負幅度大或伴隨調帳補稅風險</span>
+      <span class="flex items-center gap-2"><span class="light light-off"></span>未採用 / 視個案架構</span>
+      <span class="w-full text-slate-500">＊公司名義燈號：相較不投資是否多繳。個人名義燈號：<span class="text-emerald-300">綠＝總稅負不高於公司名義</span>、<span class="text-amber-300">黃＝總稅負高於公司名義</span>。</span>
+      <span class="text-slate-500">＊燈號為架構性提示，非稅額試算結果</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     4. 風險檢核清單
+     ============================================================ -->
+<section id="checklist">
+  <div class="mb-6">
+    <p class="text-xs tracking-[.2em] text-emerald-400 font-semibold">STEP 03 · RISK CHECKLIST</p>
+    <h2 class="text-xl sm:text-2xl font-bold text-white mt-1">風險檢核清單</h2>
+  </div>
+  <div class="grid md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3 gap-4">
+    <template x-for="c in checklist" :key="c.key">
+      <div class="glass rounded-2xl p-5 flex flex-col">
+        <div class="flex items-start gap-3">
+          <div class="w-6 h-6 rounded-md border-2 grid place-items-center shrink-0 mt-0.5 transition" :class="c.checked ? 'bg-emerald-500 border-emerald-500' : 'border-slate-500'">
+            <svg x-show="c.checked" class="w-4 h-4 text-navy-950" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clip-rule="evenodd"/></svg>
+          </div>
+          <div class="flex-1">
+            <p class="font-bold text-white text-sm" x-text="c.title"></p>
+            <span class="inline-flex items-center gap-2 mt-2 text-xs px-2.5 py-1 rounded-full" :class="tagCls(c.color)">
+              <span class="light" :class="lightCls(c.color)"></span><span x-text="c.level"></span>
+            </span>
+          </div>
+        </div>
+        <p class="text-[13px] text-slate-400 mt-3 leading-relaxed" x-text="c.note"></p>
+      </div>
+    </template>
+  </div>
+</section>
+
+<!-- ============================================================
+     5. 諮詢會計師問題清單
+     ============================================================ -->
+<section id="cta" class="glass rounded-3xl p-4 sm:p-8 overflow-hidden relative scroll-mt-4">
+  <div class="absolute -right-24 -top-24 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl"></div>
+
+  <!-- 會計師團隊（CONFIG.showTeam 控制） -->
+  <div class="relative mb-8" x-show="cfg.showTeam">
+    <h2 class="text-xl sm:text-2xl font-bold text-white">會計師專案團隊</h2>
+    <div class="mt-4 grid sm:grid-cols-3 gap-3">
+      <template x-for="m in cfg.team" :key="m.name">
+        <div class="rounded-2xl bg-navy-900/70 border border-slate-700/40 p-4">
+          <div class="w-11 h-11 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 grid place-items-center font-bold text-white" x-text="m.name.slice(0,1)"></div>
+          <p class="font-bold text-white mt-3 text-sm" x-text="m.name"></p>
+          <p class="text-[12px] text-emerald-300" x-text="m.title"></p>
+          <p class="text-[12px] text-slate-400 mt-1.5 leading-relaxed" x-text="m.focus"></p>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- 諮詢問題清單 -->
+  <div class="relative">
+    <p class="text-xs tracking-[.2em] text-emerald-400 font-semibold">STEP 04 · ASK YOUR CPA</p>
+    <h2 class="text-xl sm:text-2xl font-bold text-white mt-1">帶著這些問題，和會計師一起決策</h2>
+    <p class="text-sm text-slate-400 mt-2 leading-relaxed">稅負高低只是架構選擇的一部分。資產傳承、資金槓桿、公司型態與股權安排，都會改變最適合您的答案。系統已依您目前的情境標示<span class="text-emerald-300">推薦問題</span>，請挑出您<b class="text-white">最關心的 3 個問題</b>，可複製、列印，或直接帶入 LINE 詢問會計師。</p>
+
+    <div class="mt-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[12.5px] text-amber-100 leading-relaxed">
+      ⚠️ 本頁燈號僅為觀念方向，<b>請勿依此自行調整持股或資金架構</b>。以下問題涉及個人資產、家族與公司全貌，需由會計師綜合評估。
+    </div>
+
+    <!-- 分類篩選 -->
+    <div class="mt-5 -mx-4 sm:mx-0 px-4 sm:px-0 flex gap-2 overflow-x-auto pb-2 side-scroll no-print">
+      <button @click="qFilter='rec'" :class="qFilter==='rec' ? 'bg-emerald-500 text-navy-950 font-bold' : 'tag-slate'" class="shrink-0 px-3 py-2 rounded-full text-[12.5px] transition">⭐ 推薦 <span x-text="'(' + Object.keys(recQ).length + ')'"></span></button>
+      <button @click="qFilter='all'" :class="qFilter==='all' ? 'bg-emerald-500 text-navy-950 font-bold' : 'tag-slate'" class="shrink-0 px-3 py-2 rounded-full text-[12.5px] transition">全部</button>
+      <template x-for="c in qCats" :key="c.id">
+        <button @click="qFilter=c.id" :class="qFilter===c.id ? 'bg-emerald-500 text-navy-950 font-bold' : 'tag-slate'" class="shrink-0 px-3 py-2 rounded-full text-[12.5px] transition" x-text="c.icon + ' ' + c.name"></button>
+      </template>
+    </div>
+
+    <div class="mt-3 flex flex-wrap items-center gap-2 no-print">
+      <button @click="pickRecommended()" class="px-3 py-1.5 rounded-lg tag-green text-[12px]">＋ 幫我挑 3 題最相關的</button>
+      <span class="text-[12px] text-slate-500">最多選 <span x-text="cfg.maxQuestions"></span> 題，其餘可面談時再深入</span>
+      <button @click="picked=[]" x-show="picked.length" class="px-3 py-1.5 rounded-lg tag-slate text-[12px]">清除勾選</button>
+    </div>
+
+    <p x-show="limitMsg" x-transition class="mt-3 text-[12.5px] text-amber-300">⚠️ 最多只能選 <span x-text="cfg.maxQuestions"></span> 題，請先取消一題再選擇。</p>
+
+    <!-- 問題列表 -->
+    <div class="mt-4 space-y-6">
+      <template x-for="c in qCats" :key="c.id">
+        <div x-show="visibleQ(c.id).length">
+          <h3 class="text-sm font-bold text-white mb-2 flex items-center gap-2"><span x-text="c.icon"></span><span x-text="c.name"></span></h3>
+          <div class="grid md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
+            <template x-for="q in visibleQ(c.id)" :key="q.id">
+              <label class="flex items-start gap-3 rounded-xl p-3 border transition"
+                     :class="picked.includes(q.id) ? 'bg-emerald-500/10 border-emerald-500/50 cursor-pointer' : (qFull ? 'bg-navy-900/40 border-slate-800 opacity-45 cursor-not-allowed' : 'bg-navy-900/60 border-slate-700/40 hover:border-slate-500 cursor-pointer')">
+                <input type="checkbox" class="sr-only" :checked="picked.includes(q.id)" @change="toggleQ(q.id)" />
+                <span class="mt-0.5 w-5 h-5 rounded-md border-2 grid place-items-center shrink-0 transition" :class="picked.includes(q.id) ? 'bg-emerald-500 border-emerald-500' : 'border-slate-500'">
+                  <svg x-show="picked.includes(q.id)" class="w-3.5 h-3.5 text-navy-950" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clip-rule="evenodd"/></svg>
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-[13px] text-slate-200 leading-relaxed" x-text="q.q"></span>
+                  <span x-show="recQ[q.id]" class="inline-block mt-1.5 text-[11px] px-2 py-0.5 rounded-full tag-green" x-text="'⭐ ' + recQ[q.id]"></span>
+                </span>
+              </label>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- 自訂問題 -->
+    <div class="mt-6">
+      <label for="customQ" class="text-sm font-bold text-white">✍️ 其他想問的問題 <span class="font-normal text-[12px] text-slate-500">（也計入 <span x-text="cfg.maxQuestions"></span> 題內，一行一題）</span></label>
+      <textarea id="customQ" x-model="customQ" rows="3" placeholder="例如：我明年打算把一部分股票轉給小孩，要先注意什麼？（一行一題）" class="mt-2 w-full rounded-xl bg-navy-950/70 border border-slate-700/60 focus:border-emerald-500 focus:outline-none p-3 text-[13px] text-slate-200 placeholder:text-slate-600"></textarea>
+      <p x-show="customOver" class="mt-1 text-[12px] text-amber-300">⚠️ 已超過 <span x-text="cfg.maxQuestions"></span> 題，超出的自訂問題不會帶入。</p>
+    </div>
+
+    <!-- 動作列 -->
+    <div class="mt-5 rounded-2xl bg-navy-950/70 border border-slate-700/50 p-4 flex flex-col sm:flex-row sm:items-center gap-3 no-print">
+      <p class="text-sm text-slate-300 sm:mr-auto">已選 <span class="font-mono font-bold text-emerald-300 text-lg" x-text="selectedQuestions.length"></span><span class="font-mono text-slate-500"> / <span x-text="cfg.maxQuestions"></span></span> 題</p>
+      <div class="grid grid-cols-2 sm:flex gap-2">
+        <button @click="copyQuestions()" :disabled="!selectedQuestions.length" class="px-4 py-3 rounded-xl tag-slate text-sm disabled:opacity-40" x-text="copiedQ ? '✓ 已複製' : '📋 複製問題'"></button>
+        <button @click="openReport()" class="px-4 py-3 rounded-xl tag-slate text-sm">📄 諮詢報告</button>
+        <button @click="book()" :disabled="!selectedQuestions.length" class="col-span-2 px-5 py-3 rounded-xl bg-[#06C755] hover:brightness-110 text-white font-bold text-sm disabled:opacity-40 transition">💬 帶著問題問會計師</button>
+      </div>
+    </div>
+    <p class="mt-2 text-[11px] text-slate-500">「諮詢報告」會整合本次情境、燈號與您勾選的問題，可列印或存成 PDF 帶去面談。</p>
+  </div>
+</section>
+
+</div>
+</main>
+
+<!-- 手機版：底部浮動對照列（決策地圖不在畫面時出現） -->
+<div x-show="showBar" x-transition.opacity x-cloak class="md:hidden no-print fixed bottom-0 inset-x-0 z-40 px-3 pb-3 pt-2 bg-gradient-to-t from-navy-950 via-navy-950/95 to-transparent">
+  <button @click="document.getElementById('branches').scrollIntoView({behavior:'smooth'})" class="w-full glass rounded-2xl px-3 py-2.5 grid grid-cols-[1fr_1fr_auto] items-center gap-2 text-left shadow-2xl shadow-black/60">
+    <span class="flex items-center gap-2 min-w-0"><span class="light" :class="lightCls(personal.overall)"></span><span class="min-w-0"><span class="block text-[10px] text-slate-400">A 個人名義</span><span class="block text-[12px] font-bold text-white truncate" x-text="personal.overallText"></span></span></span>
+    <span class="flex items-center gap-2 min-w-0 border-l border-slate-700 pl-2"><span class="light" :class="lightCls(corporate.overall)"></span><span class="min-w-0"><span class="block text-[10px] text-slate-400">B 公司名義</span><span class="block text-[12px] font-bold text-white truncate" x-text="corporate.overallText"></span></span></span>
+    <span class="text-[11px] text-emerald-300 whitespace-nowrap">看地圖 ↓</span>
+  </button>
+</div>
+
+<footer class="border-t border-slate-800 mt-6 pb-20 md:pb-0">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-[12px] text-slate-500 leading-relaxed">
+    <p>© <span x-text="new Date().getFullYear()"></span> <span x-text="cfg.firmName"></span>｜本工具內容僅供觀念說明，不構成任何稅務、法律或投資建議。法規條文、免稅額與門檻依財政部當年度公告為準。</p>
+  </div>
+</footer>
+
+<!-- ============================================================
+     診斷報告 Modal
+     ============================================================ -->
+<div id="report-modal" x-show="showReport" x-cloak x-transition.opacity class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" @keydown.escape.window="showReport=false">
+  <div id="report-card" @click.outside="showReport=false" class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-navy-900 border border-slate-700 shadow-2xl p-6 sm:p-8">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <p class="text-[11px] tracking-[.2em] text-emerald-400">PROJECT DIAGNOSTIC REPORT</p>
+        <h3 class="text-xl font-bold text-white mt-1">專案風險診斷與諮詢報告</h3>
+        <p class="text-[12px] text-slate-400 mt-1"><span x-text="cfg.firmName"></span> ｜ 產出時間 <span x-text="reportTime"></span></p>
+      </div>
+    </div>
+
+    <div class="mt-6 grid grid-cols-2 gap-2 text-[13px]">
+      <div class="rounded-lg bg-navy-950/60 p-3"><span class="text-slate-400">投資規模</span><br><span class="text-white font-medium" x-text="fmt(s.amount)+' 萬'"></span></div>
+      <div class="rounded-lg bg-navy-950/60 p-3"><span class="text-slate-400">標的類型</span><br><span class="text-white font-medium" x-text="s.asset==='domestic'?'國內上市櫃股票':'境外股票/基金/債券'"></span></div>
+      <div class="rounded-lg bg-navy-950/60 p-3"><span class="text-slate-400">公司年營收</span><br><span class="text-white font-medium" x-text="fmt(s.revenue)+' 萬'"></span></div>
+      <div class="rounded-lg bg-navy-950/60 p-3"><span class="text-slate-400">申報型態</span><br><span class="text-white font-medium" x-text="s.filing==='expanded'?'擴大書審':'同業利潤率/查帳'"></span></div>
+      <div class="rounded-lg bg-navy-950/60 p-3"><span class="text-slate-400">個人級距</span><br><span class="text-white font-medium" x-text="s.bracket+'%'"></span></div>
+      <div class="rounded-lg bg-navy-950/60 p-3"><span class="text-slate-400">盈餘處置</span><br><span class="text-white font-medium" x-text="s.retain?'保留再投資':'分配股東'"></span></div>
+      <div class="rounded-lg bg-navy-950/60 p-3" x-show="s.asset==='domestic'"><span class="text-slate-400">股利占比</span><br><span class="text-white font-medium" x-text="s.divRatio+'%'"></span></div>
+    </div>
+
+    <h4 class="font-bold text-white mt-6 mb-2 text-sm">觸發之法規節點</h4>
+    <ul class="space-y-1.5 text-[13px]">
+      <template x-for="n in [...personal.nodes.map(x=>({...x,b:'個人'})), ...corporate.nodes.map(x=>({...x,b:'公司'}))]" :key="n.b+n.title">
+        <li class="flex items-start gap-2"><span class="light mt-1.5" :class="lightCls(n.color)"></span><span><span class="text-slate-400" x-text="'['+n.b+'] '"></span><span class="text-slate-200" x-text="n.title"></span></span></li>
+      </template>
+    </ul>
+
+    <h4 class="font-bold text-white mt-6 mb-2 text-sm">風險警示</h4>
+    <ul class="space-y-1.5 text-[13px]">
+      <li x-show="alertExpanded" class="text-rose-300">🔴 擴大書審偏離警示：<span x-text="expandedReasons.join('；')"></span></li>
+      <li x-show="alertAudit" class="text-amber-300">🟡 法定簽證門檻預警：<span x-text="auditReasons.join('；')"></span></li>
+      <li x-show="!alertExpanded && !alertAudit" class="text-emerald-300">🟢 未觸發主要門檻警示</li>
+    </ul>
+
+    <div x-show="selectedQuestions.length">
+      <h4 class="font-bold text-white mt-6 mb-2 text-sm">想請教會計師的問題</h4>
+      <ol class="list-decimal pl-5 space-y-1.5 text-[13px] text-slate-200">
+        <template x-for="q in selectedQuestions" :key="q"><li x-text="q"></li></template>
+      </ol>
+    </div>
+
+    <h4 class="font-bold text-white mt-6 mb-2 text-sm">檢核清單</h4>
+    <ul class="space-y-1.5 text-[13px]">
+      <template x-for="c in checklist" :key="c.key">
+        <li class="flex items-start gap-2"><span class="light mt-1.5" :class="lightCls(c.color)"></span><span class="text-slate-200"><span x-text="c.title"></span>：<strong x-text="c.level"></strong></span></li>
+      </template>
+    </ul>
+
+    <p class="mt-6 text-[11.5px] text-slate-500 leading-relaxed border-t border-slate-700 pt-4">本報告為架構性觀念對照與風險掃描結果，不含任何最終應納稅額，亦不構成稅務簽證意見。實際適用須由執業會計師依個案帳證、持股結構及當年度法令進行覆核。</p>
+
+    <div class="mt-5 flex flex-wrap gap-2 no-print">
+      <button @click="window.print()" class="px-4 py-2.5 rounded-lg tag-slate text-sm">列印 / 存成 PDF</button>
+      <button @click="book()" x-show="selectedQuestions.length" class="px-4 py-2.5 rounded-lg bg-[#06C755] text-white font-bold text-sm">帶著問題問會計師</button>
+      <button @click="showReport=false" class="ml-auto px-4 py-2.5 rounded-lg text-slate-400 text-sm hover:text-white">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==================================================================
+   ★ CONFIG：事務所資訊請於此處統一修改 ★
+   ================================================================== */
+const CONFIG = {
+  firmName:   'XX 會計師事務所',
+  firmNameEn: 'XX CPA FIRM',
+  logoText:   'XX',          // 無圖片 LOGO 時顯示的文字
+  logoUrl:    '',            // 例：'https://your-domain.com/logo.png'（填入後取代文字 LOGO）
+  lineId:     '@yourlineid', // LINE 官方帳號 ID（含 @）；留空則改用 bookingUrl
+  bookingUrl: '',            // 預約表單網址，例：'https://forms.gle/xxxx'
+  maxQuestions: 3,          // 諮詢問題最多可選題數
+  showTeam:   false,         // 會計師專案團隊區塊：true 顯示 / false 隱藏
+  team: [
+    { name: '王大明 會計師', title: '主持會計師',   focus: '企業集團架構、營所稅簽證與稅務訴願' },
+    { name: '林小華 會計師', title: '稅務顧問部協理', focus: '境外所得、CFC 制度與高資產家族規劃' },
+    { name: '陳美玲 經理',   title: '財稅簽證部',   focus: '擴大書審轉查帳、公司設立與增資登記' },
+  ],
+};
+
+/* ==================================================================
+   規則門檻參數（僅作為警示觸發條件；法規數字以當年度公告為準）
+   ================================================================== */
+const RULES = {
+  expandedCap:          3000,  // 擴大書審：營業收入淨額＋非營業收入 3,000 萬以下（萬元）
+  expandedMargin:       0.06,  // 擴大書審 淨利率假設
+  auditMandatory:       10000, // 營業收入淨額＋非營業收入達 1 億：應委任會計師查核簽證申報
+  capitalAuditThreshold:3000,  // 股份有限公司實收資本額 3,000 萬以上：財報應經會計師查核簽證（公司法§20）
+  dividendCreditCap:    8,     // 個人股利 8.5% 可抵減稅額每戶上限 8 萬（萬元）
+  overseasIncludeLine:  100,   // 個人海外所得 100 萬以上全數計入基本所得額（萬元）
+  amtExemption:         750,   // 個人基本所得額免稅額（萬元，依當年度公告）
+  amtRate:              0.20,  // 個人基本稅額稅率
+  minorRate:            0.05,  // 燈號判斷：增量有效稅率 ≤ 5% 視為「影響不大」（綠燈）
+  nhiRate:              0.0211,// 二代健保補充保費費率（請依當年度公告確認）
+  corpTaxRate:          0.20,  // 營利事業所得稅率
+  corpAmtExemption:     60,    // 營利事業基本所得額免稅額（萬元，請依當年度公告確認）
+  corpAmtRate:          0.12,  // 營利事業基本稅額稅率（請依當年度公告確認）
+};
+
+/* ==================================================================
+   ★ 諮詢問題題庫：可自行增刪修改 ★
+   cat 對應 Q_CATS 的 id；推薦規則寫在 warRoom() 的 recQ
+   ================================================================== */
+const Q_CATS = [
+  { id: 'estate',    icon: '🏛️', name: '遺產與贈與稅' },
+  { id: 'leverage',  icon: '⚖️', name: '個人槓桿與資金風險' },
+  { id: 'opco',      icon: '🏢', name: '營運公司 vs 投資公司' },
+  { id: 'setup',     icon: '🧱', name: '設立投資公司' },
+  { id: 'equity',    icon: '🧬', name: '股權規劃與傳承' },
+  { id: 'offshore',  icon: '🌐', name: '境外投資與 CFC' },
+];
+const QUESTIONS = [
+  { id: 'e1', cat: 'estate',   q: '以個人名義持有大額股票或基金，未來繼承時遺產稅怎麼計算？和改以公司股權形式持有有什麼差別？' },
+  { id: 'e2', cat: 'estate',   q: '把投資資金給子女、或用子女名義開戶投資，會不會被認定為贈與？每年贈與免稅額要怎麼運用？' },
+  { id: 'e3', cat: 'estate',   q: '境外帳戶或境外資產在遺產稅上如何認定？資金匯回台灣會有哪些稅務影響？' },
+  { id: 'e4', cat: 'estate',   q: '搭配保單或信託來安排投資資產，是否有實質課稅或遺贈稅被追補的風險？' },
+  { id: 'e5', cat: 'estate',   q: '夫妻之間的資金移轉、剩餘財產差額分配，會如何影響我的傳承規劃？' },
+
+  { id: 'l1', cat: 'leverage', q: '用股票質押、房貸增貸或理財型房貸的資金來投資，利息可以扣除嗎？個人與公司名義有何不同？' },
+  { id: 'l2', cat: 'leverage', q: '如果融資投資發生虧損或被斷頭，個人名義和公司名義在損失認列上有什麼差別？' },
+  { id: 'l3', cat: 'leverage', q: '公司把資金借給股東投資、或股東向公司借款，會有哪些稅務（設算利息）與法律風險？' },
+  { id: 'l4', cat: 'leverage', q: '大額資金進出若被國稅局查核，我需要準備哪些資金來源與流向的證明？' },
+
+  { id: 'o1', cat: 'opco',     q: '在現有營運公司直接投資，和另外設立投資公司持股，在稅負與風險隔離上有什麼差異？' },
+  { id: 'o2', cat: 'opco',     q: '投資收益放在營運公司帳上，會不會影響擴大書審資格、銀行授信或未來上市櫃規劃？' },
+  { id: 'o3', cat: 'opco',     q: '營運公司與投資公司之間的資金往來、關係人交易，需要注意哪些查核重點？' },
+  { id: 'o4', cat: 'opco',     q: '投資公司的人事、辦公室、車輛等費用，哪些可以合理認列？' },
+
+  { id: 'c1', cat: 'setup',    q: '以我的狀況，值得設立投資公司嗎？要設有限公司還是股份有限公司？資本額設多少合適？' },
+  { id: 'c2', cat: 'setup',    q: '用我手上既有的股票作價投資成立公司，會不會產生所得稅或證交稅？' },
+  { id: 'c3', cat: 'setup',    q: '設立投資公司後，每年的記帳、申報與簽證成本大概是多少？' },
+  { id: 'c4', cat: 'setup',    q: '公司盈餘保留下來再投資，未分配盈餘加徵 5% 有哪些合法的規劃方式？' },
+  { id: 'c5', cat: 'setup',    q: '投資公司需要注意營利事業最低稅負制嗎？什麼情況會被課到？' },
+
+  { id: 's1', cat: 'equity',   q: '我、配偶與子女的持股比例要怎麼安排，才能兼顧經營控制權與傳承？' },
+  { id: 's2', cat: 'equity',   q: '閉鎖性股份有限公司、特別股或表決權信託，能否用來分離經營權與財產權？' },
+  { id: 's3', cat: 'equity',   q: '逐年把股權移轉給子女時，股權價值如何評價？什麼時機移轉比較有利？' },
+  { id: 's4', cat: 'equity',   q: '未來若出售營運公司股權，個人直接持股和透過投資公司持股的稅負差多少？' },
+  { id: 's5', cat: 'equity',   q: '若發生家族成員糾紛或婚姻變動，現在的持股架構有哪些保護或漏洞？' },
+
+  { id: 'x1', cat: 'offshore', q: '我現有的境外帳戶或境外公司，會不會落入個人或營利事業 CFC 規定？' },
+  { id: 'x2', cat: 'offshore', q: '境外所得的扣繳憑證、國外已納稅額要怎麼保存，才能申報抵減？' },
+  { id: 'x3', cat: 'offshore', q: '在共同申報準則（CRS）資訊交換下，我的境外金融帳戶會有什麼影響？' },
+];
+
+function warRoom() {
+  const DEFAULT = { amount: 1000, yield: 5, divRatio: 50, revenue: 2000, asset: 'domestic', filing: 'expanded', bracket: 30, retain: true };
+  return {
+    cfg: CONFIG,
+    s: { ...DEFAULT },
+    showReport: false,
+    reportTime: '',
+
+    showBar: false,
+    descAll: false,
+    qCats: Q_CATS,
+    qFilter: 'rec',
+    picked: [],
+    customQ: '',
+    copiedQ: false,
+    limitMsg: false,
+    init() {
+      // 手機版：捲過控制台、且兩個分支不在畫面上時，顯示底部對照列
+      let branchesVisible = false;
+      const update = () => { this.showBar = window.scrollY > 350 && !branchesVisible; };
+      const el = document.getElementById('branches');
+      if (el && 'IntersectionObserver' in window) {
+        new IntersectionObserver(([e]) => { branchesVisible = e.isIntersecting; update(); }, { threshold: 0.15 }).observe(el);
+      }
+      window.addEventListener('scroll', update, { passive: true });
+    },
+
+    /* ---------- 工具 ---------- */
+    fmt(n) { return Math.round(n).toLocaleString('zh-TW'); },
+    pct(v, min, max) { return ((v - min) / (max - min)) * 100; },
+    lightCls(c) { return { green: 'light-green', yellow: 'light-yellow', red: 'light-red' }[c] || 'light-off'; },
+    tagCls(c)   { return { green: 'tag-green',  yellow: 'tag-yellow',  red: 'tag-red'  }[c] || 'tag-slate'; },
+    worst(arr)  { return arr.includes('red') ? 'red' : arr.includes('yellow') ? 'yellow' : 'green'; },
+
+    loadExample() {
+      this.s = { amount: 2000, yield: 6, divRatio: 50, revenue: 3000, asset: 'foreign', filing: 'expanded', bracket: 30, retain: true };
+      document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    reset() { this.s = { ...DEFAULT }; },
+
+    /* ---------- 量級指標（非稅額） ---------- */
+    get income()         { return this.s.amount * this.s.yield / 100; },
+    get grossTotal()     { return this.s.revenue + this.income; },
+    get baseProfit()     { return this.s.revenue * RULES.expandedMargin; },
+    get incomeVsProfit() { return this.baseProfit ? this.income / this.baseProfit * 100 : 0; },
+    get marginLift()     { return this.s.revenue ? this.income / this.s.revenue * 100 : 0; },
+    // 公司名義投資國內股票：價差計入基本所得額後，最低稅負是否高於一般營所稅（僅判斷方向，不輸出金額）
+    // 價差部分依「股利占比」拆分；本業所得以「營收 × 6%」推估
+    corpAmtExtra(G) {
+      const P = this.baseProfit;
+      return Math.max(0, (P + G - RULES.corpAmtExemption) * RULES.corpAmtRate - P * RULES.corpTaxRate);
+    },
+    get corpAmtTriggered() { return this.corpAmtExtra(this.gainPart) > 0; },
+    get divPart()  { return this.s.asset === 'domestic' ? this.income * this.s.divRatio / 100 : this.income; },
+    get gainPart() { return this.s.asset === 'domestic' ? this.income - this.divPart : 0; },
+    get corpColor()      { return this.corporate.overall === 'red' ? '#F43F5E' : this.corporate.overall === 'yellow' ? '#FBBF24' : '#10B981'; },
+
+    /* ==================================================================
+       燈號統一定義（整頁一致）
+       🟢 green  ：影響不大 —— 此項對最終稅負影響有限
+       🟡 yellow ：因投資多繳 —— 採此投資架構會產生額外稅負，不投資則不會發生
+       🔴 red    ：多繳且衝擊大 —— 額外稅負幅度大，或伴隨調帳補稅風險
+       ⚪ slate  ：未採用 / 視個案架構
+       以下有效稅率僅供內部比較方向，畫面不顯示任何金額
+       ================================================================== */
+    burden(rate) { return rate <= RULES.minorRate ? 'green' : 'yellow'; },
+    // 個人股利之增量有效稅率：合併計稅（扣 8.5% 抵減，有上限） vs 28% 分開計稅
+    divEff(D) {
+      const b = this.s.bracket / 100;
+      const combined = D > 0 ? b - Math.min(D * 0.085, RULES.dividendCreditCap) / D : b - 0.085;
+      const separate = 0.28;
+      return { combined, separate, pick: combined <= separate ? 'combined' : 'separate', best: Math.min(combined, separate) };
+    },
+    overallText(c) { return c === 'green' ? '影響不大' : c === 'yellow' ? '因投資多繳' : '多繳且衝擊大'; },
+    em(c, t) { return `<b class="${c === 'green' ? 'text-emerald-300' : c === 'red' ? 'text-rose-300' : 'text-amber-300'}">${t}</b>`; },
+
+    /* ---------- 分支 A：個人名義（燈號基準：與公司名義相比之總稅負） ----------
+       🟢 個人名義總稅負 ≤ 公司名義（較省或相當）
+       🟡 個人名義總稅負 > 公司名義（個人負擔較重）
+       內部以同一組假設估算兩條路徑，只比較方向，畫面不顯示金額 */
+    personalDivTax(D) {
+      const b = this.s.bracket / 100;
+      const combined = b * D - Math.min(D * 0.085, RULES.dividendCreditCap); // 可抵減稅額可退
+      return Math.min(combined, D * 0.28);
+    },
+    get taxPersonal() {
+      const I = this.income;
+      if (this.s.asset === 'domestic') {
+        const D = this.divPart;                         // 價差停徵，不課
+        return this.personalDivTax(D) + D * RULES.nhiRate;
+      }
+      return (I >= RULES.overseasIncludeLine && I > RULES.amtExemption) ? (I - RULES.amtExemption) * RULES.amtRate : 0;
+    },
+    get taxCorporate() {
+      const I = this.income;
+      const corpTax = this.s.asset === 'domestic' ? this.corpAmtExtra(this.gainPart) : I * RULES.corpTaxRate;
+      const profit = I - corpTax;
+      if (this.s.retain) return corpTax + profit * 0.05;
+      return corpTax + this.personalDivTax(profit) + profit * RULES.nhiRate;
+    },
+    get vsCorp() {
+      const d = this.taxPersonal - this.taxCorporate, tol = this.income * 0.01;
+      return d > tol ? 'heavier' : d < -tol ? 'lighter' : 'similar';
+    },
+    get cmpColor() { return this.vsCorp === 'heavier' ? 'yellow' : 'green'; },
+    get cmpLabel() { return { lighter: '較公司名義省稅', similar: '與公司名義相當', heavier: '較公司名義負擔重' }[this.vsCorp]; },
+
+    get personal() {
+      const s = this.s, inc = this.income, nodes = [], cc = this.cmpColor;
+      const corpDesc = s.asset === 'domestic'
+        ? (s.retain ? '公司名義：股利免稅、盈餘保留僅加徵 5%，個人層級稅負遞延至未來分配時' : '公司名義：盈餘分配時價差也轉成股利，股東須就全部收益再課綜所稅')
+        : (s.retain ? '公司名義：境外收益全額課 20% 營所稅，保留盈餘再加徵 5%' : '公司名義：境外收益先課 20% 營所稅，分配後股東再課綜所稅');
+      nodes.push({
+        law: '總稅負比較', color: cc,
+        title: '與公司名義相比：' + this.cmpLabel,
+        desc: corpDesc + '。' + (cc === 'green'
+          ? this.em('green', '以目前設定，個人名義的總稅負不高於公司名義。')
+          : this.em('yellow', '以目前設定，個人名義當期總稅負高於公司名義。'))
+          + (s.retain ? '<br><span class="text-slate-400">＊公司保留盈餘僅比較當期，未來分配時仍會產生個人稅負。</span>' : ''),
+      });
+      if (s.asset === 'domestic') {
+        const pick = this.divEff(this.divPart).pick;
+        nodes.push({
+          law: '所得稅法 §15 第4項', color: pick === 'combined' ? cc : 'slate',
+          title: `8.5% 可抵減稅額（每戶上限 ${RULES.dividendCreditCap} 萬）` + (pick === 'combined' ? ' ← 較有利方向' : ''),
+          desc: '股利併入綜合所得總額課稅，按股利 8.5% 計算可抵減稅額。',
+        });
+        nodes.push({
+          law: '所得稅法 §15 第5項', color: pick === 'separate' ? cc : 'slate',
+          title: '28% 單一稅率分開計稅' + (pick === 'separate' ? ' ← 較有利方向' : ''),
+          desc: '股利及盈餘合計金額按 28% 單一稅率分開計算，不併入綜合所得。',
+        });
+        nodes.push({
+          law: '全民健康保險法 §31', color: s.retain ? 'yellow' : 'green',
+          title: '二代健保補充保費',
+          desc: s.retain
+            ? '個人領取股利當期即須扣取；公司名義保留盈餘則暫不發生，' + this.em('yellow', '此項個人負擔較重。')
+            : '兩種架構最終分配給個人時都須扣取，' + this.em('green', '此項差異不大。'),
+        });
+        nodes.push({
+          law: '所得稅法 §4-1', color: 'green',
+          title: '證券交易所得停徵',
+          desc: '個人價差停徵所得稅；公司名義之價差則須計入最低稅負、未分配盈餘，分配時亦轉為股利課稅，' + this.em('green', '此項個人較有利。'),
+        });
+      } else {
+        const over100 = inc >= RULES.overseasIncludeLine;
+        const amtHit = over100 && inc > RULES.amtExemption;
+        nodes.push({
+          law: '所得基本稅額條例 §12', color: cc,
+          title: over100 ? `海外所得達 ${RULES.overseasIncludeLine} 萬：須計入基本所得額` : `海外所得未達 ${RULES.overseasIncludeLine} 萬：免計入`,
+          desc: (over100 ? '須計入基本所得額，但仍享免稅額；' : '免計入基本所得額；') + '公司名義則須全額計入課徵 20% 營所稅。',
+        });
+        nodes.push({
+          law: '所得基本稅額條例 §13', color: amtHit ? cc : (over100 ? 'green' : 'slate'),
+          title: `基本所得額（AMT）${RULES.amtExemption} 萬免稅額檢核`,
+          desc: amtHit ? '海外所得已超過免稅額，可能產生基本稅額，須與公司名義之 20% 營所稅比較。'
+              : '以目前量級扣除免稅額後通常不產生差額（仍須併同保險給付、私募基金等其他特定所得檢核）。',
+        });
+        nodes.push({
+          law: '所得基本稅額條例 §12-1（個人 CFC）', color: 'slate',
+          title: '個人受控外國企業（CFC）制度（視個案架構）',
+          desc: '個人直接持有境外金融商品不適用；若改透過低稅負區境外公司持有並具控制力，才可能產生額外稅負，需個案評估。',
+        });
+      }
+      return { nodes, overall: cc, overallText: this.cmpLabel };
+    },
+
+    /* ---------- 分支 B：公司名義 ---------- */
+    get corporate() {
+      const s = this.s, nodes = [];
+      if (s.asset === 'domestic') {
+        nodes.push({
+          law: '所得稅法 §42', color: 'green',
+          title: '國內股利不計入營利事業所得額（免稅）',
+          desc: '公司取得國內營利事業分配之股利，不計入所得額課稅，' + this.em('green', '公司層級不因此多繳。'),
+        });
+        nodes.push({
+          law: '所得基本稅額條例 §7', color: this.corpAmtTriggered ? 'yellow' : 'green',
+          title: '證券交易所得計入營利事業基本所得額' + (this.corpAmtTriggered ? '：可能觸發最低稅負' : '：影響有限'),
+          desc: this.corpAmtTriggered
+            ? '投資價差量級相對本業所得偏大，計入基本所得額後，' + this.em('yellow', '最低稅負可能高於一般營所稅，形成「因投資而多繳」的情況') + '；若不做此投資則不會發生。'
+            : '價差雖須計入營利事業基本所得額，但以目前量級推估，' + this.em('green', '一般營所稅仍高於最低稅負，對最終稅負影響有限。'),
+        });
+      } else {
+        nodes.push({
+          law: '所得稅法 §3、§24', color: 'red',
+          title: '全額計入營業外收入，課徵 20% 營所稅',
+          desc: '境外股利、利息、基金及處分利益屬營利事業全球所得，全額計入課稅所得，' + this.em('red', '不投資就不會發生，且額外稅負幅度大。'),
+        });
+        nodes.push({
+          law: '所得稅法 §3 第2項', color: 'green',
+          title: '國外已納稅額扣抵（減輕項目）',
+          desc: '境外已扣繳稅款可取得憑證扣抵，屬減輕重複課稅之項目；超過扣抵上限之部分無法抵減。',
+        });
+        nodes.push({
+          law: '所得稅法 §43-3（營利事業 CFC）', color: 'slate',
+          title: '營利事業受控外國企業（CFC）制度（視個案架構）',
+          desc: '公司直接持有境外金融商品不適用；若經由低稅負區境外子公司持有並具控制力，才可能產生額外稅負，需個案評估。',
+        });
+      }
+      nodes.push({
+        law: '所得稅法 §66-9', color: s.retain ? 'yellow' : 'green',
+        title: '未分配盈餘加徵 5% 營所稅',
+        desc: s.retain
+          ? '投資收益（含 §42 免稅股利）保留於公司會增加未分配盈餘，' + this.em('yellow', '就增加部分加徵 5%，屬因投資而多繳。')
+          : '盈餘於當年度分配，' + this.em('green', '不因投資收益產生未分配盈餘加徵，此項影響不大。'),
+      });
+      const e2 = this.divEff(this.income), c2 = this.burden(e2.best);
+      nodes.push({
+        law: '所得稅法 §15、§14', color: s.retain ? 'slate' : c2,
+        title: '個人二次分配綜合所得稅',
+        desc: s.retain
+          ? '盈餘保留期間暫不發生；未來分配予個人股東時，才轉為股東層級課稅。'
+          : '投資收益分配予個人股東，須再依個人股利計稅方式課稅（兩層課稅），' + (c2 === 'green'
+              ? this.em('green', '以目前級距增量稅負有限。')
+              : this.em('yellow', '以目前級距會產生額外綜所稅負擔。')),
+      });
+      const overall = this.worst(nodes.map(n => n.color).concat(this.alertExpanded ? ['red'] : []));
+      return { nodes, overall, overallText: this.overallText(overall) };
+    },
+
+    /* ---------- 警示判斷 ---------- */
+    // 紅燈條件：營業收入＋非營業收入超過擴大書審上限 → 失去資格、改查帳，屬「因投資多繳且伴隨調帳補稅風險」
+    get expandedReasons() {
+      const r = [];
+      if (this.s.filing !== 'expanded' || this.grossTotal <= RULES.expandedCap) return r;
+      r.push(`營業收入＋非營業收入量級約 ${this.fmt(this.grossTotal)} 萬，已超過擴大書審 3,000 萬適用上限`);
+      if (this.marginLift >= 2) r.push(`投資收益使帳面淨利率較 6% 標準偏離約 +${this.marginLift.toFixed(1)} pt`);
+      if (this.incomeVsProfit >= 100) r.push('非營業收益已超過本業推估淨利，易成為選查對象');
+      return r;
+    },
+    get alertExpanded() { return this.expandedReasons.length > 0; },
+
+    get auditReasons() {
+      const r = [];
+      if (this.grossTotal >= RULES.auditMandatory) r.push('營業收入＋非營業收入達 1 億元，應委任會計師辦理所得稅查核簽證申報');
+      if (this.s.amount >= RULES.capitalAuditThreshold) r.push('以增資方式注入投資資金將達 3,000 萬資本額，股份有限公司財報須經會計師查核簽證（公司法§20）');
+      if (this.s.amount >= 500) r.push('資金以增資方式投入公司時，須辦理資本額查核簽證（資本簽證）');
+      if (this.s.filing === 'expanded' && this.grossTotal > RULES.expandedCap) r.push('失去擴大書審資格後，建議評估改採會計師查帳簽證申報');
+      return r;
+    },
+    get alertAudit() { return this.auditReasons.length > 0; },
+
+    /* ---------- 綜合風險等級（實質課稅） ---------- */
+    get riskScore() {
+      let sc = 0;
+      sc += this.s.amount >= 3000 ? 3 : this.s.amount >= 1500 ? 2 : this.s.amount >= 500 ? 1 : 0;
+      if (this.s.asset === 'foreign') sc += 2;
+      if (this.alertExpanded) sc += 2;
+      if (this.incomeVsProfit >= 100) sc += 1;
+      if (this.s.bracket >= 30 && this.s.retain) sc += 1; // 高級距個人藉公司保留盈餘遞延課稅
+      return sc;
+    },
+    get riskLevel() {
+      const sc = this.riskScore;
+      return sc >= 6 ? { label: '高', color: 'red' } : sc >= 3 ? { label: '中', color: 'yellow' } : { label: '低', color: 'green' };
+    },
+
+    /* ---------- 檢核清單 ---------- */
+    get checklist() {
+      const rl = this.riskLevel;
+      const retainColor = this.s.retain ? 'yellow' : this.burden(this.divEff(this.income).best);
+      const acct = this.alertExpanded || this.grossTotal >= RULES.auditMandatory ? 'red' : this.alertAudit ? 'yellow' : 'green';
+      return [
+        {
+          key: 'substance', checked: rl.color !== 'green',
+          title: '國稅局實質課稅風險等級', level: rl.label, color: rl.color,
+          note: rl.color === 'red' ? '個人資金移轉至公司投資且規模大、跨境，易被依稅捐稽徵法 §12-1 實質課稅原則檢視交易目的。'
+              : rl.color === 'yellow' ? '架構本身合法，但須備妥商業目的說明、資金流向與董事會決議等佐證。'
+              : '目前規模與架構之實質課稅疑慮較低，仍應保持帳證完整。',
+        },
+        {
+          key: 'retain', checked: true,
+          title: '盈餘留存與二次課稅衝擊', level: this.s.retain ? '留存：因投資多繳 5%' : (retainColor === 'green' ? '分配：影響不大' : '分配：股東層級多繳'), color: retainColor,
+          note: this.s.retain ? '保留盈餘可遞延個人課稅，但需面對未分配盈餘加徵及未來分配時之二次課稅。'
+              : '分配盈餘可免未分配盈餘加徵，但股東需依綜所稅級距或 28% 分開計稅。',
+        },
+        {
+          key: 'audit', checked: acct !== 'green',
+          title: '帳務合規與財稅簽證必要性', level: acct === 'red' ? '強烈建議' : acct === 'yellow' ? '建議評估' : '一般', color: acct,
+          note: acct === 'red' ? '已觸及擴大書審偏離或法定簽證門檻，建議由會計師規劃申報方式並提供簽證保護。'
+              : acct === 'yellow' ? '增資或資本額變動涉及資本簽證，建議事前規劃投資科目與帳務分類。'
+              : '目前規模可維持既有申報方式，年度終了前建議做一次帳務健檢。',
+        },
+      ];
+    },
+
+    /* ---------- 報告與預約 ---------- */
+    openReport() {
+      this.reportTime = new Date().toLocaleString('zh-TW', { hour12: false });
+      this.showReport = true;
+    },
+    /* ---------- 諮詢問題 ---------- */
+    // 依目前情境推薦問題：{ 題號: 推薦原因 }
+    get recQ() {
+      const s = this.s, r = {};
+      const add = (ids, why) => ids.forEach(id => { if (!r[id]) r[id] = why; });
+      // 加入順序＝優先順序（「幫我挑 3 題」取前 3 題）
+      if (this.alertExpanded) add(['o2'], '已觸發擴大書審警示');
+      if (s.asset === 'foreign') add(['x1'], '您選擇了境外標的');
+      if (this.vsCorp === 'heavier') add(['c1'], '個人名義稅負較公司名義重');
+      if (s.amount >= 2000) add(['e1'], '投資規模較大，宜及早規劃傳承');
+      if (s.retain) add(['c4'], '您傾向將盈餘保留在公司');
+      if (s.asset === 'domestic' && this.corpAmtTriggered) add(['c5'], '可能觸發營利事業最低稅負');
+      if (s.bracket >= 30) add(['c1', 's1'], '您的綜所稅級距較高');
+      add(['o1'], '比較個人與公司架構前必問');
+      if (s.asset === 'foreign') add(['x2', 'e3', 'x3'], '您選擇了境外標的');
+      if (s.amount >= 2000) add(['e2', 's1', 's3'], '投資規模較大，宜及早規劃傳承');
+      if (s.amount >= 1000) add(['l1', 'l4'], '大額資金宜確認資金來源與槓桿');
+      if (!s.retain) add(['s4'], '盈餘分配涉及股東層級課稅');
+      return r;
+    },
+    visibleQ(cat) {
+      return QUESTIONS.filter(q => q.cat === cat && (this.qFilter === 'all' || this.qFilter === cat || (this.qFilter === 'rec' && this.recQ[q.id])));
+    },
+    get customLines() { return this.customQ.split('\n').map(t => t.trim()).filter(Boolean); },
+    get qFull() { return this.picked.length + this.customLines.length >= CONFIG.maxQuestions; },
+    get customOver() { return this.picked.length + this.customLines.length > CONFIG.maxQuestions; },
+    toggleQ(id) {
+      if (this.picked.includes(id)) { this.picked = this.picked.filter(x => x !== id); this.limitMsg = false; return; }
+      if (this.qFull) { this.limitMsg = true; clearTimeout(this._lt); this._lt = setTimeout(() => this.limitMsg = false, 2500); return; }
+      this.picked = [...this.picked, id];
+    },
+    pickRecommended() {
+      const room = Math.max(0, CONFIG.maxQuestions - this.customLines.length);
+      this.picked = Object.keys(this.recQ).slice(0, room);
+      this.limitMsg = false;
+    },
+    get selectedQuestions() {
+      const list = QUESTIONS.filter(q => this.picked.includes(q.id)).map(q => q.q);
+      return [...list, ...this.customLines].slice(0, CONFIG.maxQuestions);
+    },
+    scenarioText() {
+      const s = this.s;
+      return `投資規模 ${this.fmt(s.amount)} 萬｜標的：${s.asset === 'domestic' ? '國內上市櫃' : '境外'}｜申報：${s.filing === 'expanded' ? '擴大書審' : '查帳'}｜營收 ${this.fmt(s.revenue)} 萬｜級距 ${s.bracket}%｜盈餘${s.retain ? '保留' : '分配'}`;
+    },
+    questionsText(max) {
+      let qs = this.selectedQuestions, more = 0;
+      if (max && qs.length > max) { more = qs.length - max; qs = qs.slice(0, max); }
+      return qs.map((q, i) => `${i + 1}. ${q}`).join('\n') + (more ? `\n…另有 ${more} 題，面談時再詳談` : '');
+    },
+    async copyQuestions() {
+      const txt = `【想請教會計師的問題】\n情境：${this.scenarioText()}\n\n${this.questionsText()}`;
+      try { await navigator.clipboard.writeText(txt); this.copiedQ = true; setTimeout(() => this.copiedQ = false, 1800); } catch (e) {}
+    },
+    book() {
+      const msg = `您好，我使用了投資架構風險地圖，想請教會計師以下問題：\n情境：${this.scenarioText()}\n\n${this.questionsText(8)}`;
+      let url;
+      if (CONFIG.lineId) url = `https://line.me/R/oaMessage/${encodeURIComponent(CONFIG.lineId)}/?${encodeURIComponent(msg)}`;
+      else if (CONFIG.bookingUrl) url = CONFIG.bookingUrl;
+      if (url) window.open(url, '_blank', 'noopener');
+    },
+  };
+}
+</script>
+</body>
+</html>
