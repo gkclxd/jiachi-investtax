@@ -18,6 +18,7 @@
 
 <style>
 :root{
+  --dot-prio:#FFE08A; --dot-calm:#8FF0CC; --dot-quiet:#C4CCD6;
   --bg:#0A0D12; --bg-2:#0D1117; --surface:#11161D; --surface-3:#1B222C;
   --line:rgba(226,232,240,.08); --line-2:rgba(226,232,240,.14); --line-3:rgba(226,232,240,.24);
   --text:#ECE9E3; --text-2:#BAC0C8; --muted:#8A929D; --faint:#5E6772;
@@ -161,7 +162,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 60px;color:var(--muted);f
 .q-count{font-size:12.5px;color:var(--muted)}
 
 /* 結果 */
-.result{padding:56px 0 110px}
+.result{padding:56px 0 0}
 .r-date{font-size:13px;color:var(--muted)}
 .r-title{font-size:clamp(24px,3.6vw,40px);margin:14px 0 18px;max-width:22em}
 .r-sub{color:var(--text-2);font-weight:300;font-size:15.5px;margin:0;max-width:40em}
@@ -175,10 +176,10 @@ footer{border-top:1px solid var(--line);padding:44px 0 60px;color:var(--muted);f
 .issue .top{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
 .issue .no{font-family:var(--latin);font-size:14px;color:var(--faint)}
 .pr{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
-.pr i{width:6px;height:6px;border-radius:50%}
-.pr.high{color:var(--prio)} .pr.high i{background:var(--prio)}
-.pr.review i{background:var(--calm)}
-.pr.stable i{background:var(--quiet)}
+.pr i{width:8px;height:8px;border-radius:50%}
+.pr.high{color:var(--dot-prio)} .pr.high i{background:var(--dot-prio);box-shadow:0 0 8px rgba(255,224,138,.55)}
+.pr.review{color:#BFEBDA} .pr.review i{background:var(--dot-calm);box-shadow:0 0 8px rgba(143,240,204,.45)}
+.pr.stable i{background:var(--dot-quiet)}
 .issue h3{font-family:var(--serif);font-weight:600;font-size:clamp(18px,2.1vw,21px);margin:0 0 12px;line-height:1.55}
 .issue p{margin:0;color:var(--text-2);font-weight:300;font-size:15px;line-height:1.95}
 .issue .link-d{margin-top:12px;font-size:13.5px;color:var(--accent)}
@@ -215,7 +216,39 @@ footer{border-top:1px solid var(--line);padding:44px 0 60px;color:var(--muted);f
 @media(max-width:560px){.path{padding:26px 22px}}
 
 /* 顧問模式（?advisor=1） */
-.adv{margin-top:72px;border-top:1px dashed var(--line-2);padding-top:28px}
+.adv{margin-top:72px;border-top:1px solid var(--line)}
+.adv-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:26px 0;text-align:left}
+.adv-k{display:block;font-size:12px;color:var(--accent);letter-spacing:.12em;margin-bottom:4px}
+.adv-t{display:block;font-size:17px;font-weight:500;letter-spacing:.03em}
+.adv.solo{margin-top:36px;border-top:0}
+.adv-wrap{padding-bottom:110px}
+.adv-page{padding-top:56px}
+.conv{display:block;font-size:11.5px;color:var(--accent);font-weight:400;text-align:right;margin-top:2px}
+.ctrl .top{align-items:flex-start;gap:12px}
+.ctrl .v{text-align:right}
+.ctrl .v>span:first-child{display:block}
+.badge{display:inline-block;font-size:11px;letter-spacing:.06em;color:#0A0D12;background:var(--dot-prio);border-radius:999px;padding:1px 9px;margin-right:8px;vertical-align:1px}
+.entry-lead{font-size:13px;color:var(--muted);margin:30px 0 12px}
+.entry{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:620px}
+@media(max-width:560px){.entry{grid-template-columns:1fr}}
+.entry-card{display:flex;flex-direction:column;text-align:left;border:1px solid var(--line-2);border-radius:16px;padding:20px 20px 18px;background:var(--bg-2);transition:border-color .2s,background .2s}
+.entry-card:hover{border-color:var(--line-3);background:var(--surface)}
+.entry-card.hl{border-color:rgba(255,224,138,.45);background:linear-gradient(180deg,rgba(255,224,138,.06),var(--bg-2) 70%)}
+.entry-card.hl:hover{border-color:rgba(255,224,138,.7)}
+.entry-k{font-size:12px;color:var(--muted);letter-spacing:.06em}
+.entry-t{font-size:17px;font-weight:500;margin:8px 0 6px;letter-spacing:.03em}
+.entry-d{font-size:13px;color:var(--muted);font-weight:300;line-height:1.8;flex:1}
+.entry-go{margin-top:14px;font-size:13.5px;color:var(--text)}
+.entry-card.hl .entry-go{color:var(--dot-prio)}
+.nav-adv{font-size:13px}
+@media(max-width:600px){.nav-adv{display:none}}
+.adv-s{display:block;font-size:13px;color:var(--muted);font-weight:300;margin-top:4px}
+.adv-toggle .pm{width:34px;height:34px;border-radius:50%;border:1px solid var(--line-2);display:grid;place-items:center;flex-shrink:0;color:var(--text-2);font-family:var(--latin)}
+.adv-body{padding-bottom:36px}
+.branches{align-content:start;align-items:start}
+.legend{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:6px;font-size:12px;color:var(--muted);font-weight:300}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
 .adv-body{display:grid;grid-template-columns:280px 1fr;gap:36px}
 @media(max-width:980px){.adv-body{grid-template-columns:1fr}}
 .ctrl{border:1px solid var(--line);border-radius:var(--r);padding:20px;background:var(--bg-2);display:grid;gap:20px;align-self:start}
@@ -234,9 +267,9 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;bac
 .node{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer}
 .node .lw{font-size:10.5px;color:var(--faint)}
 .node .tt{display:flex;gap:8px;font-size:13px;line-height:1.55}
-.node .tt i{width:6px;height:6px;border-radius:50%;margin-top:7px;flex-shrink:0}
+.node .tt i{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
 .node .ds{font-size:12.5px;color:var(--text-2);font-weight:300;margin-top:6px;line-height:1.8}
-.c-red{background:var(--prio)} .c-yellow{background:var(--prio);opacity:.6} .c-green{background:var(--calm)} .c-slate{background:var(--quiet)}
+.c-red{background:var(--dot-prio);box-shadow:0 0 8px rgba(255,224,138,.55)} .c-yellow{background:var(--dot-calm);box-shadow:0 0 8px rgba(143,240,204,.45)} .c-green{background:var(--dot-quiet)} .c-slate{background:transparent;box-shadow:inset 0 0 0 1.2px var(--dot-quiet)}
 
 /* 分享 */
 .sheet-bg{position:fixed;inset:0;background:rgba(3,5,8,.72);z-index:60;display:flex;align-items:flex-end;justify-content:center}
@@ -284,6 +317,7 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;bac
         <svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1.5" stroke="#9DB8AE"/><path d="M3.5 6V4.2a2.5 2.5 0 015 0V6" stroke="#9DB8AE"/></svg>
         <span class="t">不需身分資料</span>
       </span>
+      <button class="link nav-adv" @click="openAdv()">進階分流地圖</button>
       <button class="btn btn-ghost btn-sm" x-show="canBook" @click="book()">預約會談</button>
     </div>
   </div>
@@ -298,11 +332,22 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;bac
         <p class="kicker">重大決策前的第二意見</p>
         <h1 class="serif"><span class="nw">在做重大決定之前，</span><br/>先看看還有哪些問題<span class="nw">沒被想到。</span></h1>
         <p class="lede">出售企業、設立投資公司、把股權交給下一代，或配置一大筆資產之前，真正需要確認的，往往<b>不只是投資報酬率</b>。</p>
-        <p class="lede">回答 4 個問題，取得一份可以直接帶去和會計師討論的架構診斷。</p>
-        <div class="hero-cta">
-          <button class="btn btn-primary" @click="startQuiz()">開始架構診斷 →</button>
-          <a href="#six" class="link">企業主最常忽略的六件事</a>
+        <p class="entry-lead">選擇您想要的開始方式</p>
+        <div class="entry">
+          <button class="entry-card" @click="startQuiz()">
+            <span class="entry-k">問答評估・約 3 分鐘</span>
+            <span class="entry-t">先回答 4 個問題</span>
+            <span class="entry-d">依您正在考慮的決定，找出最值得先確認的議題，並產生可帶給會計師的摘要。</span>
+            <span class="entry-go">開始診斷 →</span>
+          </button>
+          <button class="entry-card hl" @click="openAdv()">
+            <span class="entry-k"><span class="badge">測試</span>進階分流地圖</span>
+            <span class="entry-t">直接使用進階分流</span>
+            <span class="entry-d">自行輸入金額與收益，即時對照同一筆投資放在個人名下或營運中公司名下的不同路徑。</span>
+            <span class="entry-go">開啟分流地圖 →</span>
+          </button>
         </div>
+        <a href="#six" class="link" style="display:inline-block;margin-top:22px">企業主最常忽略的六件事</a>
         <div class="hero-note">
           <svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1.5" stroke="#9DB8AE"/><path d="M3.5 6V4.2a2.5 2.5 0 015 0V6" stroke="#9DB8AE"/></svg>
           <span>約 3 分鐘。不需要姓名、身分證字號、帳戶資訊或資產明細；資產規模也可以選擇不透露。</span>
@@ -384,7 +429,10 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;bac
   <section class="closing">
     <div class="wrap">
       <h2 class="serif">這件事，不能只看投資報酬率。</h2>
-      <button class="btn btn-primary" @click="startQuiz()">開始架構診斷 →</button>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" @click="startQuiz()">先回答 4 個問題 →</button>
+        <button class="btn btn-ghost" @click="openAdv()">直接使用進階分流地圖</button>
+      </div>
     </div>
   </section>
 </main>
@@ -553,23 +601,46 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;bac
       </div>
     </section>
 
-    <!-- 顧問模式：網址加上 ?advisor=1 才會顯示 -->
-    <section class="adv no-print" x-show="advisorMode">
-      <p class="kicker" style="color:var(--muted)">顧問模式・個人名義與公司名義的架構分流</p>
-      <p style="font-size:13px;color:var(--muted);font-weight:300;margin:6px 0 22px">數值依問答結果推估帶入，可調整。燈號只表示方向，不代表應納稅額。</p>
-      <div class="adv-body">
+  </div>
+</main>
+
+<!-- ======================= 進階分流地圖（獨立使用） ======================= -->
+<main x-show="view==='adv'" x-cloak class="adv-page">
+  <div class="wrap">
+    <p class="kicker"><span class="badge">測試</span>進階分流地圖</p>
+    <h1 class="serif r-title">個人名義與營運中公司名義投資的架構分流</h1>
+    <p class="r-sub">輸入投資金額、收益與公司條件，即時對照同一筆投資放在個人名下或營運中公司名下，會走上哪些不同的課稅路徑。燈號只表示方向，不代表應納稅額。</p>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-top:26px" class="no-print">
+      <button class="btn btn-ghost btn-sm" @click="startQuiz()">想知道還有哪些議題？回答 4 個問題 →</button>
+      <button class="link" @click="goHome()">回首頁</button>
+    </div>
+  </div>
+</main>
+
+<div class="wrap adv-wrap" x-show="view==='result' || view==='adv'" x-cloak>
+    <!-- 進階分流地圖（預設收合；網址加上 ?advisor=1 會自動展開） -->
+    <section class="adv no-print" :class="{solo: view==='adv'}">
+      <button class="adv-toggle" x-show="view==='result'" :aria-expanded="advOpen" @click="advOpen=!advOpen">
+        <span>
+          <span class="adv-k">進階</span>
+          <span class="adv-t">個人名義與營運中公司名義投資的架構分流</span>
+          <span class="adv-s">同一筆投資放在個人或公司名下，會走上哪些不同的路徑。數值依您的回答推估帶入，可自行調整。</span>
+        </span>
+        <span class="pm" x-text="advOpen ? '−' : '+'"></span>
+      </button>
+      <div class="adv-body" x-show="advOpen || view==='adv'">
         <div class="ctrl">
           <div><div class="top"><span>投資金額</span><span class="v" x-text="fmt(m.amount)+' 萬'"></span></div><input type="range" min="100" max="50000" step="100" x-model.number="m.amount" :style="`--p:${pct(m.amount,100,50000)}%`" /></div>
-          <div><div class="top"><span>年化收益率</span><span class="v" x-text="m.yield+'%'"></span></div><input type="range" min="1" max="15" step="0.5" x-model.number="m.yield" :style="`--p:${pct(m.yield,1,15)}%`" /></div>
-          <div x-show="m.asset==='domestic'"><div class="top"><span>股利占比</span><span class="v" x-text="m.divRatio+'%'"></span></div><input type="range" min="0" max="100" step="10" x-model.number="m.divRatio" :style="`--p:${m.divRatio}%`" /></div>
+          <div><div class="top"><span>年化收益率</span><span class="v"><span x-text="m.yield+'%'"></span><span class="conv" x-text="'≈ 年收益 ' + fmt(income) + ' 萬'"></span></span></div><input type="range" min="1" max="15" step="0.5" x-model.number="m.yield" :style="`--p:${pct(m.yield,1,15)}%`" /></div>
+          <div x-show="m.asset==='domestic'"><div class="top"><span>股利占比</span><span class="v"><span x-text="m.divRatio+'%'"></span><span class="conv" x-text="'股利股息 ' + fmt(divPart) + ' 萬・價差 ' + fmt(gainPart) + ' 萬'"></span></span></div><input type="range" min="0" max="100" step="10" x-model.number="m.divRatio" :style="`--p:${m.divRatio}%`" /></div>
           <div><div class="top"><span>公司年營收</span><span class="v" x-text="fmt(m.revenue)+' 萬'"></span></div><input type="range" min="300" max="30000" step="100" x-model.number="m.revenue" :style="`--p:${pct(m.revenue,300,30000)}%`" /></div>
-          <div class="seg"><button :aria-pressed="m.asset==='domestic'" @click="m.asset='domestic'">國內</button><button :aria-pressed="m.asset==='foreign'" @click="m.asset='foreign'">境外</button></div>
-          <div class="seg"><button :aria-pressed="m.filing==='expanded'" @click="m.filing='expanded'">擴大書審</button><button :aria-pressed="m.filing==='audit'" @click="m.filing='audit'">查帳</button></div>
-          <div class="seg"><template x-for="b in [5,12,20,30,40]" :key="b"><button :aria-pressed="m.bracket===b" @click="m.bracket=b" x-text="b+'%'"></button></template></div>
-          <div class="seg"><button :aria-pressed="m.retain" @click="m.retain=true">盈餘保留</button><button :aria-pressed="!m.retain" @click="m.retain=false">分配</button></div>
+<div><div class="top"><span>投資標的</span></div><div class="seg"><button :aria-pressed="m.asset==='domestic'" @click="m.asset='domestic'">國內上市櫃</button><button :aria-pressed="m.asset==='foreign'" @click="m.asset='foreign'">境外</button></div></div>
+<div><div class="top"><span>公司營所稅申報</span></div><div class="seg"><button :aria-pressed="m.filing==='expanded'" @click="m.filing='expanded'">擴大書審</button><button :aria-pressed="m.filing==='audit'" @click="m.filing='audit'">查帳簽證</button></div></div>
+<div><div class="top"><span>個人綜所稅級距</span></div><div class="seg"><template x-for="b in [5,12,20,30,40]" :key="b"><button :aria-pressed="m.bracket===b" @click="m.bracket=b" x-text="b+'%'"></button></template></div></div>
+<div><div class="top"><span>公司盈餘</span></div><div class="seg"><button :aria-pressed="m.retain" @click="m.retain=true">保留於公司</button><button :aria-pressed="!m.retain" @click="m.retain=false">分配給股東</button></div></div>
         </div>
         <div class="branches">
-          <template x-for="br in [{t:'個人名義',b:'與公司名義比較總稅負',d:personal},{t:'公司名義',b:'相較不投資是否產生額外稅負',d:corporate}]" :key="br.t">
+          <template x-for="br in [{t:'個人名義',b:'與營運中公司名義比較總稅負',d:personal},{t:'營運中公司名義',b:'相較不投資是否產生額外稅負',d:corporate}]" :key="br.t">
             <div class="branch">
               <h4 x-text="br.t + '・' + br.d.overallText"></h4>
               <div class="basis-t" x-text="'基準：' + br.b"></div>
@@ -580,14 +651,17 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;bac
                   <div class="ds" x-show="o" x-text="n.desc"></div>
                 </div>
               </template>
-              <template x-if="br.t==='公司名義'"><div style="font-size:12px;color:var(--muted);line-height:1.8;margin-top:8px"><template x-for="r in [...expandedReasons, ...auditReasons]" :key="r"><div x-text="'・' + r"></div></template></div></template>
+              <template x-if="br.t==='營運中公司名義'"><div style="font-size:12px;color:var(--muted);line-height:1.8;margin-top:8px"><template x-for="r in [...expandedReasons, ...auditReasons]" :key="r"><div x-text="'・' + r"></div></template></div></template>
             </div>
           </template>
+          <div class="legend">
+            <span><i class="c-red"></i>建議優先確認</span><span><i class="c-yellow"></i>值得一併討論</span><span><i class="c-green"></i>目前未見明顯訊號</span><span><i class="c-slate"></i>視個案架構</span>
+            <span style="flex-basis:100%">點選項目可展開說明。燈號只表示方向，不代表應納稅額；法規門檻以當年度公告為準。</span>
+          </div>
         </div>
       </div>
     </section>
-  </div>
-</main>
+</div>
 
 <footer class="no-print">
   <div class="wrap foot-grid">
@@ -721,15 +795,16 @@ function app() {
     stepLabels: ['考慮中的決定', '資產規模', '持有方式', '不確定的事', '補充（可略過）'],
     a: { decision: [], size: '', hold: [], concern: [], revenue: 'na', income: 'unknown', retain: 'unknown' },
     m: { amount: 2000, yield: 5, divRatio: 50, revenue: 2500, asset: 'domestic', filing: 'expanded', bracket: 30, retain: true },
-    shareOpen: false, toast: '', today: '', advisorMode: false,
+    shareOpen: false, toast: '', today: '', advOpen: false,
 
     init() {
       this.today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
-      this.advisorMode = new URLSearchParams(location.search).has('advisor');
+      this.advOpen = new URLSearchParams(location.search).has('advisor');
     },
     top() { window.scrollTo(0, 0); },
     goHome() { this.view = 'home'; this.top(); },
     startQuiz() { this.view = 'quiz'; this.step = 1; this.top(); },
+    openAdv() { this.view = 'adv'; this.top(); },
     restart() { this.a = { decision: [], size: '', hold: [], concern: [], revenue: 'na', income: 'unknown', retain: 'unknown' }; this.startQuiz(); },
 
     // exclusive：與其他選項互斥的選項（例如「沒有特定決定」）
@@ -908,7 +983,7 @@ function app() {
     get personal() {
       const m = this.m, nodes = [], cc = this.vsCorp === 'heavier' ? 'yellow' : 'green';
       const label = { lighter: '稅負較輕', similar: '兩者相近', heavier: '稅負較重' }[this.vsCorp];
-      nodes.push({ law: '總稅負比較', color: cc, title: '與公司名義相比：' + label, desc: m.retain ? '公司保留盈餘僅比較當期，未來分配時仍會產生個人稅負。' : '公司分配盈餘時，股東須就收益再課綜所稅。' });
+      nodes.push({ law: '總稅負比較', color: cc, title: '與營運中公司名義相比：' + label, desc: m.retain ? '公司保留盈餘僅比較當期，未來分配時仍會產生個人稅負。' : '公司分配盈餘時，股東須就收益再課綜所稅。' });
       if (m.asset === 'domestic') {
         const pick = this.divEff(this.divPart).pick;
         nodes.push({ law: '所得稅法 §15', color: cc, title: pick === 'combined' ? '股利合併計稅（8.5% 可抵減）較有利' : '股利 28% 分開計稅較有利', desc: '依級距與股利量級，兩種計稅方式擇一。' });
